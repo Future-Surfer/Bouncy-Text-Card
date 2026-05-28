@@ -9,51 +9,50 @@ class BouncyTextCard extends HTMLElement {
       entity_suffix: "",
       show_unit: true,
 
-      height: 220,
-      speed: 1.25,
-      size: 56,
-      jitter: 0.01,
+      height: 240,
+      speed: 1.15,
+      size: 58,
+      jitter: 0.008,
 
-      // Logo/text styling
-      logo_color: "var(--primary-text-color)",
+      logo_color: "#38bdf8",
       logo_opacity: 1,
 
-      // Whole-card surface styling, borrowed from Simple Band Graph Card
-      background_color: "var(--card-background-color)",
+      background_color: "#111827",
       background_color_mode: "static",
       background_opacity: 1,
 
-      card_radius: "var(--ha-card-border-radius, 12px)",
-      card_padding: 16,
+      card_radius: "22px",
+      card_padding: 14,
 
-      card_border_width: 0,
-      card_border_color: "var(--divider-color)",
-      card_border_opacity: 0,
+      card_border_width: 1,
+      card_border_color: "#ffffff",
+      card_border_opacity: 0.16,
 
-      card_shadow: false,
-      card_shadow_color: "rgba(0, 0, 0, 0.25)",
-      card_shadow_blur: 24,
+      card_shadow: true,
+      card_shadow_color: "rgba(0, 0, 0, 0.45)",
+      card_shadow_blur: 28,
       card_shadow_spread: 0,
       card_shadow_offset_x: 0,
-      card_shadow_offset_y: 8,
+      card_shadow_offset_y: 10,
 
-      card_shine: false,
-      card_shine_opacity: 0.12,
-      card_shine_size: 55,
+      card_shine: true,
+      card_shine_opacity: 0.14,
+      card_shine_size: 62,
       card_shine_position: 0,
-      card_shine_angle: 155,
+      card_shine_angle: 145,
+      shine_layer: "above_logo",
 
-      // Inner bounce arena / plot-area styling
-      plot_background_color: "transparent",
-      plot_background_color_mode: "none",
-      plot_background_opacity: 0,
-      plot_background_radius: 8,
+      plot_background_color: "#020617",
+      plot_background_color_mode: "static",
+      plot_background_opacity: 1,
+      plot_background_radius: 14,
 
-      // Bounds styling
-      show_bounds: true,
-      bounds_color: "var(--divider-color)",
+      bounce_padding: 0,
+
+      show_bounds: false,
+      bounds_color: "#ffffff",
       bounds_width: 1,
-      bounds_opacity: 0.6,
+      bounds_opacity: 0.14,
       bounds_style: "dashed",
 
       show_debug: false,
@@ -65,14 +64,13 @@ class BouncyTextCard extends HTMLElement {
 
       corner_celebration: true,
       corner_threshold: null,
-      corner_text: "CORNER!",
+      corner_text: "NICE!",
       corner_duration: 650,
-      corner_text_color: "var(--primary-text-color)",
+      corner_text_color: "#ffffff",
       corner_background_color: "rgba(250, 204, 21, 0.25)",
-      corner_border_color: "var(--accent-color, #facc15)",
-      corner_glow_color: "rgba(250, 204, 21, 0.45)",
+      corner_border_color: "#facc15",
+      corner_glow_color: "rgba(250, 204, 21, 0.55)",
 
-      // Legacy aliases, still accepted if present in old YAML
       background: undefined,
       text_color: undefined,
       border_color: undefined,
@@ -86,8 +84,279 @@ class BouncyTextCard extends HTMLElement {
     return BouncyTextCard.defaults();
   }
 
-  static getConfigElement() {
-    return document.createElement("bouncy-text-card-editor");
+  static getConfigForm() {
+    const colourModes = [
+      { value: "static", label: "Static colour" },
+      { value: "none", label: "Transparent / none" },
+    ];
+
+    const borderStyles = [
+      { value: "solid", label: "Solid" },
+      { value: "dashed", label: "Dashed" },
+      { value: "dotted", label: "Dotted" },
+    ];
+
+    return {
+      schema: [
+        {
+          type: "expandable",
+          name: "content",
+          title: "Content",
+          icon: "mdi:format-text-variant-outline",
+          flatten: true,
+          schema: [
+            {
+              name: "mode",
+              selector: {
+                select: {
+                  mode: "dropdown",
+                  options: [
+                    { value: "icon", label: "Icon" },
+                    { value: "text", label: "Text" },
+                    { value: "entity", label: "Entity state" },
+                  ],
+                },
+              },
+            },
+            { name: "icon", selector: { icon: {} } },
+            { name: "text", selector: { text: {} } },
+            { name: "entity", selector: { entity: {} } },
+            { name: "entity_prefix", selector: { text: {} } },
+            { name: "entity_suffix", selector: { text: {} } },
+            { name: "show_unit", selector: { boolean: {} } },
+          ],
+        },
+
+        {
+          type: "expandable",
+          name: "motion",
+          title: "Motion",
+          icon: "mdi:orbit",
+          flatten: true,
+          schema: [
+            { name: "height", selector: { number: { min: 80, max: 800, step: 1, mode: "box" } } },
+            { name: "size", selector: { number: { min: 8, max: 220, step: 1, mode: "box" } } },
+            { name: "speed", selector: { number: { min: 0.1, max: 10, step: 0.05, mode: "box" } } },
+            { name: "jitter", selector: { number: { min: 0, max: 0.1, step: 0.001, mode: "box" } } },
+            { name: "random_start", selector: { boolean: {} } },
+            { name: "pause_on_tap", selector: { boolean: {} } },
+          ],
+        },
+
+        {
+          type: "expandable",
+          name: "card_surface",
+          title: "Card surface",
+          icon: "mdi:card-outline",
+          flatten: true,
+          schema: [
+            { name: "background_color", selector: { text: {} } },
+            { name: "background_color_mode", selector: { select: { mode: "dropdown", options: colourModes } } },
+            { name: "background_opacity", selector: { number: { min: 0, max: 1, step: 0.05, mode: "slider" } } },
+
+            { name: "card_radius", selector: { text: {} } },
+            { name: "card_padding", selector: { number: { min: 0, max: 80, step: 1, mode: "slider" } } },
+
+            { name: "card_border_width", selector: { number: { min: 0, max: 20, step: 1, mode: "slider" } } },
+            { name: "card_border_color", selector: { text: {} } },
+            { name: "card_border_opacity", selector: { number: { min: 0, max: 1, step: 0.05, mode: "slider" } } },
+
+            { name: "card_shadow", selector: { boolean: {} } },
+            { name: "card_shadow_color", selector: { text: {} } },
+            { name: "card_shadow_blur", selector: { number: { min: 0, max: 80, step: 1, mode: "slider" } } },
+            { name: "card_shadow_spread", selector: { number: { min: -20, max: 40, step: 1, mode: "slider" } } },
+            { name: "card_shadow_offset_x", selector: { number: { min: -40, max: 40, step: 1, mode: "slider" } } },
+            { name: "card_shadow_offset_y", selector: { number: { min: -40, max: 40, step: 1, mode: "slider" } } },
+
+            { name: "card_shine", selector: { boolean: {} } },
+            {
+              name: "shine_layer",
+              selector: {
+                select: {
+                  mode: "dropdown",
+                  options: [
+                    { value: "below_logo", label: "Below bouncing icon/text" },
+                    { value: "above_logo", label: "Above bouncing icon/text" },
+                  ],
+                },
+              },
+            },
+            { name: "card_shine_opacity", selector: { number: { min: 0, max: 1, step: 0.05, mode: "slider" } } },
+            { name: "card_shine_size", selector: { number: { min: 0, max: 100, step: 1, mode: "slider", unit_of_measurement: "%" } } },
+            { name: "card_shine_position", selector: { number: { min: -100, max: 100, step: 1, mode: "slider", unit_of_measurement: "%" } } },
+            { name: "card_shine_angle", selector: { number: { min: 0, max: 360, step: 5, mode: "slider", unit_of_measurement: "°" } } },
+          ],
+        },
+
+        {
+          type: "expandable",
+          name: "bounce_arena",
+          title: "Bounce arena",
+          icon: "mdi:selection-drag",
+          flatten: true,
+          schema: [
+            { name: "plot_background_color", selector: { text: {} } },
+            { name: "plot_background_color_mode", selector: { select: { mode: "dropdown", options: colourModes } } },
+            { name: "plot_background_opacity", selector: { number: { min: 0, max: 1, step: 0.05, mode: "slider" } } },
+            { name: "plot_background_radius", selector: { number: { min: 0, max: 80, step: 1, mode: "slider" } } },
+
+            { name: "bounce_padding", selector: { number: { min: 0, max: 100, step: 1, mode: "slider" } } },
+
+            { name: "show_bounds", selector: { boolean: {} } },
+            { name: "bounds_color", selector: { text: {} } },
+            { name: "bounds_width", selector: { number: { min: 0, max: 12, step: 1, mode: "slider" } } },
+            { name: "bounds_opacity", selector: { number: { min: 0, max: 1, step: 0.05, mode: "slider" } } },
+            { name: "bounds_style", selector: { select: { mode: "dropdown", options: borderStyles } } },
+          ],
+        },
+
+        {
+          type: "expandable",
+          name: "logo_text",
+          title: "Logo / text",
+          icon: "mdi:home-assistant",
+          flatten: true,
+          schema: [
+            { name: "logo_color", selector: { text: {} } },
+            { name: "logo_opacity", selector: { number: { min: 0, max: 1, step: 0.05, mode: "slider" } } },
+            { name: "change_color_on_bounce", selector: { boolean: {} } },
+          ],
+        },
+
+        {
+          type: "expandable",
+          name: "corner_celebration",
+          title: "Corner celebration",
+          icon: "mdi:party-popper",
+          flatten: true,
+          schema: [
+            { name: "corner_celebration", selector: { boolean: {} } },
+            { name: "corner_text", selector: { text: {} } },
+            { name: "corner_duration", selector: { number: { min: 100, max: 3000, step: 50, mode: "box", unit_of_measurement: "ms" } } },
+            { name: "corner_threshold", selector: { number: { min: 0, max: 60, step: 1, mode: "box" } } },
+            { name: "corner_text_color", selector: { text: {} } },
+            { name: "corner_background_color", selector: { text: {} } },
+            { name: "corner_border_color", selector: { text: {} } },
+            { name: "corner_glow_color", selector: { text: {} } },
+          ],
+        },
+
+        {
+          type: "expandable",
+          name: "debug",
+          title: "Counters & debug",
+          icon: "mdi:bug-outline",
+          flatten: true,
+          schema: [
+            { name: "show_corner_counter", selector: { boolean: {} } },
+            { name: "show_bounce_counter", selector: { boolean: {} } },
+            { name: "show_debug", selector: { boolean: {} } },
+          ],
+        },
+      ],
+      computeLabel: BouncyTextCard.label,
+      computeHelper: BouncyTextCard.helper,
+    };
+  }
+
+  static label(schema) {
+    const labels = {
+      mode: "Mode",
+      text: "Text",
+      icon: "Icon",
+      entity: "Entity",
+      entity_prefix: "Entity prefix",
+      entity_suffix: "Entity suffix",
+      show_unit: "Show unit",
+
+      height: "Card height",
+      size: "Text / icon size",
+      speed: "Speed",
+      jitter: "Jitter",
+      random_start: "Random start",
+      pause_on_tap: "Pause on tap",
+
+      logo_color: "Logo/text colour",
+      logo_opacity: "Logo/text opacity",
+
+      background_color: "Card background colour",
+      background_color_mode: "Card background colour mode",
+      background_opacity: "Card background opacity",
+      card_radius: "Card corner radius",
+      card_padding: "Card padding",
+      card_border_width: "Card border width",
+      card_border_color: "Card border colour",
+      card_border_opacity: "Card border opacity",
+      card_shadow: "Show card shadow",
+      card_shadow_color: "Card shadow colour",
+      card_shadow_blur: "Card shadow blur",
+      card_shadow_spread: "Card shadow spread",
+      card_shadow_offset_x: "Card shadow horizontal offset",
+      card_shadow_offset_y: "Card shadow vertical offset",
+      card_shine: "Show card shine",
+      shine_layer: "Shine layer",
+      card_shine_opacity: "Card shine opacity",
+      card_shine_size: "Card shine size",
+      card_shine_position: "Card shine position",
+      card_shine_angle: "Card shine angle",
+
+      plot_background_color: "Bounce arena background colour",
+      plot_background_color_mode: "Bounce arena background colour mode",
+      plot_background_opacity: "Bounce arena background opacity",
+      plot_background_radius: "Bounce arena corner radius",
+      bounce_padding: "Bounce region padding",
+
+      show_bounds: "Show bounds",
+      bounds_color: "Bounds colour",
+      bounds_width: "Bounds width",
+      bounds_opacity: "Bounds opacity",
+      bounds_style: "Bounds style",
+
+      change_color_on_bounce: "Change colour on bounce",
+
+      corner_celebration: "Corner celebration",
+      corner_text: "Corner text",
+      corner_duration: "Corner celebration duration",
+      corner_threshold: "Corner threshold",
+      corner_text_color: "Corner text colour",
+      corner_background_color: "Corner background colour",
+      corner_border_color: "Corner border colour",
+      corner_glow_color: "Corner glow colour",
+
+      show_corner_counter: "Show corner counter",
+      show_bounce_counter: "Show bounce counter",
+      show_debug: "Show debug overlay",
+    };
+
+    return labels[schema.name] || schema.name;
+  }
+
+  static helper(schema) {
+    const helpers = {
+      mode: "Choose whether to bounce an icon, text, or an entity state.",
+      icon: "Pick an MDI icon, for example mdi:home-assistant.",
+      text: "Text shown when mode is set to text.",
+      entity: "Pick the entity whose state should bounce around the card.",
+      entity_prefix: "Optional text shown before the entity state.",
+      entity_suffix: "Optional text shown after the entity state.",
+      show_unit: "Append the entity unit of measurement when available.",
+
+      speed: "Movement speed per animation frame. Lower values are calmer.",
+      jitter: "Tiny angle variation after each bounce. Set to 0 for strict DVD-style reflection.",
+      random_start: "Start from a random position and direction.",
+      pause_on_tap: "Tap the card to pause or resume the animation.",
+
+      card_shine: "Adds a soft decorative light sweep over the full card, including the bounce arena.",
+      shine_layer: "Choose whether the shine passes over or behind the bouncing icon/text.",
+      card_padding: "Outer padding between the card edge and the bounce arena.",
+      plot_background_color: "Background colour for the inner bounce arena.",
+      bounce_padding: "Inset the invisible bounce region so the logo stays away from the screen edges.",
+      show_bounds: "Draws the actual collision area.",
+      corner_threshold: "How close to both edges counts as a corner hit. Leave blank for automatic.",
+      show_debug: "Shows position, direction, speed and size data.",
+    };
+
+    return helpers[schema.name] || "";
   }
 
   setConfig(config) {
@@ -107,41 +376,22 @@ class BouncyTextCard extends HTMLElement {
     this.corners = 0;
     this.cornerLatch = false;
     this.colour = 0;
-    this.colours = [
-      "#ef4444",
-      "#f97316",
-      "#eab308",
-      "#22c55e",
-      "#06b6d4",
-      "#3b82f6",
-      "#8b5cf6",
-      "#ec4899",
-    ];
+    this.colours = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#06b6d4", "#3b82f6", "#8b5cf6", "#ec4899"];
 
     if (!this.shadowRoot) this.attachShadow({ mode: "open" });
     this.render();
   }
 
   applyLegacyAliases(config) {
-    if (config.background !== undefined && config.background_color === undefined) {
-      this.c.background_color = config.background;
-    }
-    if (config.text_color !== undefined && config.logo_color === undefined) {
-      this.c.logo_color = config.text_color;
-    }
-    if (config.border_color !== undefined && config.card_border_color === undefined) {
-      this.c.card_border_color = config.border_color;
-    }
+    if (config.background !== undefined && config.background_color === undefined) this.c.background_color = config.background;
+    if (config.text_color !== undefined && config.logo_color === undefined) this.c.logo_color = config.text_color;
+    if (config.border_color !== undefined && config.card_border_color === undefined) this.c.card_border_color = config.border_color;
     if (config.border_width !== undefined && config.card_border_width === undefined) {
       this.c.card_border_width = config.border_width;
       this.c.card_border_opacity = 1;
     }
-    if (config.border_radius !== undefined && config.card_radius === undefined) {
-      this.c.card_radius = `${config.border_radius}px`;
-    }
-    if (config.padding !== undefined && config.card_padding === undefined) {
-      this.c.card_padding = config.padding;
-    }
+    if (config.border_radius !== undefined && config.card_radius === undefined) this.c.card_radius = `${config.border_radius}px`;
+    if (config.padding !== undefined && config.card_padding === undefined) this.c.card_padding = config.padding;
   }
 
   set hass(hass) {
@@ -164,14 +414,16 @@ class BouncyTextCard extends HTMLElement {
     const h = Number(c.height) || 220;
     const s = Number(c.size) || 56;
     const cp = Number(c.card_padding) || 0;
+    const bp = Math.max(0, Number(c.bounce_padding) || 0);
 
     const cardBg = this.resolveColor(c.background_color, c.background_color_mode, c.background_opacity);
     const plotBg = this.resolveColor(c.plot_background_color, c.plot_background_color_mode, c.plot_background_opacity);
     const borderColor = this.resolveColor(c.card_border_color, "static", c.card_border_opacity);
     const boundsColor = this.resolveColor(c.bounds_color, "static", c.bounds_opacity);
     const shadow = this.cardShadow();
-    const shine = this.bool(c.card_shine) ? "block" : "none";
     const counters = this.bool(c.show_bounce_counter) || this.bool(c.show_corner_counter);
+    const shineZ = c.shine_layer === "below_logo" ? 3 : 5;
+    const logoZ = 4;
 
     const logo =
       c.mode === "icon"
@@ -193,22 +445,6 @@ class BouncyTextCard extends HTMLElement {
           transition: box-shadow .16s, border-color .16s;
         }
 
-        ha-card::before {
-          content: "";
-          display: ${shine};
-          position: absolute;
-          inset: 0;
-          pointer-events: none;
-          z-index: 1;
-          border-radius: inherit;
-          background: linear-gradient(
-            ${Number(c.card_shine_angle) || 155}deg,
-            rgba(255,255,255,${Number(c.card_shine_opacity) || 0}) 0%,
-            rgba(255,255,255,0) ${Number(c.card_shine_size) || 55}%
-          );
-          transform: translateX(${Number(c.card_shine_position) || 0}%);
-        }
-
         .stage {
           position: relative;
           z-index: 2;
@@ -225,12 +461,38 @@ class BouncyTextCard extends HTMLElement {
           box-sizing: border-box;
           overflow: hidden;
           background: ${plotBg};
-          border: ${this.bool(c.show_bounds) ? `${Number(c.bounds_width) || 1}px ${c.bounds_style} ${boundsColor}` : "none"};
           border-radius: ${Number(c.plot_background_radius) || 0}px;
+        }
+
+        .bounds {
+          display: ${this.bool(c.show_bounds) ? "block" : "none"};
+          position: absolute;
+          z-index: 2;
+          pointer-events: none;
+          inset: ${bp}px;
+          box-sizing: border-box;
+          border: ${Number(c.bounds_width) || 1}px ${c.bounds_style} ${boundsColor};
+          border-radius: max(0px, calc(${Number(c.plot_background_radius) || 0}px - ${bp}px));
+        }
+
+        .shine {
+          display: ${this.bool(c.card_shine) ? "block" : "none"};
+          position: absolute;
+          inset: 0;
+          z-index: ${shineZ};
+          pointer-events: none;
+          border-radius: inherit;
+          background: linear-gradient(
+            ${Number(c.card_shine_angle) || 155}deg,
+            rgba(255,255,255,${Number(c.card_shine_opacity) || 0}) 0%,
+            rgba(255,255,255,0) ${Number(c.card_shine_size) || 55}%
+          );
+          transform: translateX(${Number(c.card_shine_position) || 0}%);
         }
 
         .logo {
           position: absolute;
+          z-index: ${logoZ};
           left: 0;
           top: 0;
           color: ${c.logo_color};
@@ -255,7 +517,7 @@ class BouncyTextCard extends HTMLElement {
 
         .overlay {
           position: absolute;
-          z-index: 3;
+          z-index: 6;
           pointer-events: none;
           font-size: 11px;
           line-height: 1.3;
@@ -266,16 +528,8 @@ class BouncyTextCard extends HTMLElement {
           backdrop-filter: blur(4px);
         }
 
-        #pause {
-          top: 8px;
-          left: 8px;
-        }
-
-        #counts {
-          top: 8px;
-          right: 8px;
-          text-align: right;
-        }
+        #pause { top: 8px; left: 8px; }
+        #counts { top: 8px; right: 8px; text-align: right; }
 
         #debug {
           left: 8px;
@@ -295,9 +549,7 @@ class BouncyTextCard extends HTMLElement {
           background: ${c.corner_background_color};
         }
 
-        :host([paused]) .logo {
-          opacity: .6;
-        }
+        :host([paused]) .logo { opacity: .6; }
 
         :host([corner]) ha-card {
           border-color: ${c.corner_border_color};
@@ -307,15 +559,15 @@ class BouncyTextCard extends HTMLElement {
             0 0 22px ${c.corner_glow_color};
         }
 
-        :host([corner]) #corner {
-          display: block;
-        }
+        :host([corner]) #corner { display: block; }
       </style>
 
       <ha-card>
         <div class="stage">
           <div id="arena">
+            <div class="bounds"></div>
             ${logo}
+            <div class="shine"></div>
             ${this.bool(c.pause_on_tap) ? `<div id="pause" class="overlay" hidden>Paused</div>` : ""}
             ${counters ? `
               <div id="counts" class="overlay">
@@ -360,8 +612,9 @@ class BouncyTextCard extends HTMLElement {
     const lr = this.logo.getBoundingClientRect();
     if (!ar.width || !ar.height || !lr.width || !lr.height) return;
 
-    const maxX = Math.max(0, ar.width - lr.width);
-    const maxY = Math.max(0, ar.height - lr.height);
+    const bp = Math.max(0, Number(this.c.bounce_padding) || 0);
+    const maxX = Math.max(0, ar.width - lr.width - bp * 2);
+    const maxY = Math.max(0, ar.height - lr.height - bp * 2);
 
     if (!this.ready) {
       this.init(maxX, maxY);
@@ -394,7 +647,7 @@ class BouncyTextCard extends HTMLElement {
     if (!this.isCorner(maxX, maxY)) this.cornerLatch = false;
     if (hitX || hitY) this.bounce(maxX, maxY);
 
-    this.logo.style.transform = `translate(${this.x}px, ${this.y}px)`;
+    this.logo.style.transform = `translate(${this.x + bp}px, ${this.y + bp}px)`;
   }
 
   init(maxX, maxY) {
@@ -472,12 +725,14 @@ class BouncyTextCard extends HTMLElement {
   updateDebug() {
     const ar = this.arena.getBoundingClientRect();
     const lr = this.logo.getBoundingClientRect();
+    const bp = Math.max(0, Number(this.c.bounce_padding) || 0);
 
     this.debug.textContent =
       `mode:${this.c.mode}\n` +
       `x:${this.x.toFixed(1)} y:${this.y.toFixed(1)}\n` +
       `dx:${this.dx.toFixed(2)} dy:${this.dy.toFixed(2)}\n` +
       `speed:${Math.hypot(this.dx, this.dy).toFixed(2)}\n` +
+      `padding:${bp}\n` +
       `arena:${Math.round(ar.width)}×${Math.round(ar.height)}\n` +
       `logo:${Math.round(lr.width)}×${Math.round(lr.height)}\n` +
       `paused:${this.paused ? "yes" : "no"}`;
@@ -520,297 +775,7 @@ class BouncyTextCard extends HTMLElement {
   }
 }
 
-class BouncyTextCardEditor extends HTMLElement {
-  setConfig(config) {
-    this.rawConfig = { ...config };
-    this.config = { ...BouncyTextCard.defaults(), ...config };
-    this.render();
-  }
-
-  set hass(hass) {
-    this._hass = hass;
-    if (this.forms) Object.values(this.forms).forEach(form => form.hass = hass);
-  }
-
-  render() {
-    if (!this.shadowRoot) this.attachShadow({ mode: "open" });
-
-    this.shadowRoot.innerHTML = `
-      <style>
-        .editor {
-          display: grid;
-          gap: 16px;
-        }
-        .section {
-          border: 1px solid var(--divider-color);
-          border-radius: 12px;
-          padding: 12px;
-        }
-        .title {
-          font-weight: 600;
-          color: var(--primary-text-color);
-          margin: 0 0 8px;
-        }
-        .hint {
-          margin: 0 0 12px;
-          color: var(--secondary-text-color);
-          font-size: 12px;
-          line-height: 1.4;
-        }
-      </style>
-
-      <div class="editor">
-        ${this.section("content", "Content", "Choose what bounces around the card.")}
-        ${this.section("motion", "Motion", "Control the movement and size.")}
-        ${this.section("card", "Card surface", "Style the outer card background, padding, border, shadow and shine.")}
-        ${this.section("arena", "Bounce arena", "Style the inner bounce area and visible bounds.")}
-        ${this.section("logo", "Logo/text", "Style the bouncing icon, text, or entity state.")}
-        ${this.section("corner", "Corner & debug", "Configure the corner celebration and development helpers.")}
-      </div>
-    `;
-
-    this.forms = {};
-    ["content", "motion", "card", "arena", "logo", "corner"].forEach(key => {
-      const form = this.shadowRoot.querySelector(`#${key}`);
-      this.forms[key] = form;
-      form.hass = this._hass;
-      form.data = this.config;
-      form.schema = this.schema(key);
-      form.computeLabel = this.label;
-      form.computeHelper = this.helper;
-      form.addEventListener("value-changed", e => this.changed(e));
-    });
-  }
-
-  section(id, title, hint) {
-    return `
-      <div class="section">
-        <div class="title">${title}</div>
-        <div class="hint">${hint}</div>
-        <ha-form id="${id}"></ha-form>
-      </div>
-    `;
-  }
-
-  schema(section) {
-    const mode = this.config.mode || "icon";
-
-    const content = [
-      {
-        name: "mode",
-        selector: {
-          select: {
-            mode: "dropdown",
-            options: [
-              { value: "icon", label: "Icon" },
-              { value: "text", label: "Text" },
-              { value: "entity", label: "Entity state" },
-            ],
-          },
-        },
-      },
-    ];
-
-    if (mode === "icon") content.push({ name: "icon", selector: { icon: {} } });
-    if (mode === "text") content.push({ name: "text", selector: { text: {} } });
-    if (mode === "entity") {
-      content.push(
-        { name: "entity", selector: { entity: {} } },
-        { name: "entity_prefix", selector: { text: {} } },
-        { name: "entity_suffix", selector: { text: {} } },
-        { name: "show_unit", selector: { boolean: {} } }
-      );
-    }
-
-    const colourModes = [
-      { value: "static", label: "Static colour" },
-      { value: "none", label: "Transparent / none" },
-    ];
-
-    return {
-      content,
-
-      motion: [
-        { name: "height", selector: { number: { min: 80, max: 800, step: 1, mode: "box" } } },
-        { name: "size", selector: { number: { min: 8, max: 220, step: 1, mode: "box" } } },
-        { name: "speed", selector: { number: { min: 0.1, max: 10, step: 0.05, mode: "box" } } },
-        { name: "jitter", selector: { number: { min: 0, max: 0.1, step: 0.001, mode: "box" } } },
-        { name: "random_start", selector: { boolean: {} } },
-        { name: "pause_on_tap", selector: { boolean: {} } },
-      ],
-
-      card: [
-        { name: "background_color", selector: { text: {} } },
-        { name: "background_color_mode", selector: { select: { mode: "dropdown", options: colourModes } } },
-        { name: "background_opacity", selector: { number: { min: 0, max: 1, step: 0.05, mode: "slider" } } },
-        { name: "card_radius", selector: { text: {} } },
-        { name: "card_padding", selector: { number: { min: 0, max: 80, step: 1, mode: "slider" } } },
-        { name: "card_border_width", selector: { number: { min: 0, max: 20, step: 1, mode: "slider" } } },
-        { name: "card_border_color", selector: { text: {} } },
-        { name: "card_border_opacity", selector: { number: { min: 0, max: 1, step: 0.05, mode: "slider" } } },
-        { name: "card_shadow", selector: { boolean: {} } },
-        { name: "card_shadow_color", selector: { text: {} } },
-        { name: "card_shadow_blur", selector: { number: { min: 0, max: 80, step: 1, mode: "slider" } } },
-        { name: "card_shadow_spread", selector: { number: { min: -20, max: 40, step: 1, mode: "slider" } } },
-        { name: "card_shadow_offset_x", selector: { number: { min: -40, max: 40, step: 1, mode: "slider" } } },
-        { name: "card_shadow_offset_y", selector: { number: { min: -40, max: 40, step: 1, mode: "slider" } } },
-        { name: "card_shine", selector: { boolean: {} } },
-        { name: "card_shine_opacity", selector: { number: { min: 0, max: 1, step: 0.05, mode: "slider" } } },
-        { name: "card_shine_size", selector: { number: { min: 0, max: 100, step: 1, mode: "slider", unit_of_measurement: "%" } } },
-        { name: "card_shine_position", selector: { number: { min: -100, max: 100, step: 1, mode: "slider", unit_of_measurement: "%" } } },
-        { name: "card_shine_angle", selector: { number: { min: 0, max: 360, step: 5, mode: "slider", unit_of_measurement: "°" } } },
-      ],
-
-      arena: [
-        { name: "plot_background_color", selector: { text: {} } },
-        { name: "plot_background_color_mode", selector: { select: { mode: "dropdown", options: colourModes } } },
-        { name: "plot_background_opacity", selector: { number: { min: 0, max: 1, step: 0.05, mode: "slider" } } },
-        { name: "plot_background_radius", selector: { number: { min: 0, max: 80, step: 1, mode: "slider" } } },
-        { name: "show_bounds", selector: { boolean: {} } },
-        { name: "bounds_color", selector: { text: {} } },
-        { name: "bounds_width", selector: { number: { min: 0, max: 12, step: 1, mode: "slider" } } },
-        { name: "bounds_opacity", selector: { number: { min: 0, max: 1, step: 0.05, mode: "slider" } } },
-        {
-          name: "bounds_style",
-          selector: {
-            select: {
-              mode: "dropdown",
-              options: [
-                { value: "solid", label: "Solid" },
-                { value: "dashed", label: "Dashed" },
-                { value: "dotted", label: "Dotted" },
-              ],
-            },
-          },
-        },
-      ],
-
-      logo: [
-        { name: "logo_color", selector: { text: {} } },
-        { name: "logo_opacity", selector: { number: { min: 0, max: 1, step: 0.05, mode: "slider" } } },
-        { name: "change_color_on_bounce", selector: { boolean: {} } },
-      ],
-
-      corner: [
-        { name: "corner_celebration", selector: { boolean: {} } },
-        { name: "corner_text", selector: { text: {} } },
-        { name: "corner_duration", selector: { number: { min: 100, max: 3000, step: 50, mode: "box", unit_of_measurement: "ms" } } },
-        { name: "corner_threshold", selector: { number: { min: 0, max: 60, step: 1, mode: "box" } } },
-        { name: "corner_text_color", selector: { text: {} } },
-        { name: "corner_background_color", selector: { text: {} } },
-        { name: "corner_border_color", selector: { text: {} } },
-        { name: "corner_glow_color", selector: { text: {} } },
-        { name: "show_corner_counter", selector: { boolean: {} } },
-        { name: "show_bounce_counter", selector: { boolean: {} } },
-        { name: "show_debug", selector: { boolean: {} } },
-      ],
-    }[section] || [];
-  }
-
-  changed(e) {
-    e.stopPropagation();
-
-    this.config = { ...this.config, ...e.detail.value };
-
-    this.dispatchEvent(new CustomEvent("config-changed", {
-      detail: { config: this.config },
-      bubbles: true,
-      composed: true,
-    }));
-
-    this.render();
-  }
-
-  label(schema) {
-    const labels = {
-      mode: "Mode",
-      text: "Text",
-      icon: "Icon",
-      entity: "Entity",
-      entity_prefix: "Entity prefix",
-      entity_suffix: "Entity suffix",
-      show_unit: "Show unit",
-
-      height: "Card height",
-      size: "Text / icon size",
-      speed: "Speed",
-      jitter: "Jitter",
-      random_start: "Random start",
-      pause_on_tap: "Pause on tap",
-
-      logo_color: "Logo/text colour",
-      logo_opacity: "Logo/text opacity",
-
-      background_color: "Card background colour",
-      background_color_mode: "Card background colour mode",
-      background_opacity: "Card background opacity",
-      card_radius: "Card corner radius",
-      card_padding: "Card padding",
-      card_border_width: "Card border width",
-      card_border_color: "Card border colour",
-      card_border_opacity: "Card border opacity",
-      card_shadow: "Show card shadow",
-      card_shadow_color: "Card shadow colour",
-      card_shadow_blur: "Card shadow blur",
-      card_shadow_spread: "Card shadow spread",
-      card_shadow_offset_x: "Card shadow horizontal offset",
-      card_shadow_offset_y: "Card shadow vertical offset",
-      card_shine: "Show card shine",
-      card_shine_opacity: "Card shine opacity",
-      card_shine_size: "Card shine size",
-      card_shine_position: "Card shine position",
-      card_shine_angle: "Card shine angle",
-
-      plot_background_color: "Bounce arena background colour",
-      plot_background_color_mode: "Bounce arena background colour mode",
-      plot_background_opacity: "Bounce arena background opacity",
-      plot_background_radius: "Bounce arena corner radius",
-
-      show_bounds: "Show bounds",
-      bounds_color: "Bounds colour",
-      bounds_width: "Bounds width",
-      bounds_opacity: "Bounds opacity",
-      bounds_style: "Bounds style",
-
-      change_color_on_bounce: "Change colour on bounce",
-
-      corner_celebration: "Corner celebration",
-      corner_text: "Corner text",
-      corner_duration: "Corner celebration duration",
-      corner_threshold: "Corner threshold",
-      corner_text_color: "Corner text colour",
-      corner_background_color: "Corner background colour",
-      corner_border_color: "Corner border colour",
-      corner_glow_color: "Corner glow colour",
-      show_corner_counter: "Show corner counter",
-      show_bounce_counter: "Show bounce counter",
-      show_debug: "Show debug overlay",
-    };
-
-    return labels[schema.name] || schema.name;
-  }
-
-  helper(schema) {
-    const helpers = {
-      mode: "Choose whether to bounce an icon, text, or an entity state.",
-      icon: "Pick an MDI icon, for example mdi:home-assistant.",
-      entity: "Pick the entity whose state should bounce around the card.",
-      speed: "Movement speed per animation frame. Lower values are calmer.",
-      jitter: "Tiny angle variation after each bounce. Set to 0 for strict DVD-style reflection.",
-      card_shine: "Adds a soft decorative light sweep over the card surface.",
-      card_padding: "Outer padding between the card edge and the bounce arena.",
-      plot_background_color: "Background colour for the inner bounce arena.",
-      show_bounds: "Draws the actual collision area.",
-      corner_threshold: "How close to both edges counts as a corner hit. Leave blank for automatic.",
-      show_debug: "Shows position, direction, speed and size data.",
-    };
-
-    return helpers[schema.name] || "";
-  }
-}
-
 customElements.define("bouncy-text-card", BouncyTextCard);
-customElements.define("bouncy-text-card-editor", BouncyTextCardEditor);
 
 window.customCards = window.customCards || [];
 window.customCards.push({

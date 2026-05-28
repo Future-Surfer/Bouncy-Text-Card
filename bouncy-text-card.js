@@ -22,7 +22,7 @@ class BouncyTextCard extends HTMLElement {
       background_opacity: 1,
 
       card_radius: "22px",
-      card_padding: 14,
+      card_padding: 18,
 
       card_border_width: 1,
       card_border_color: "#ffffff",
@@ -57,10 +57,20 @@ class BouncyTextCard extends HTMLElement {
 
       show_debug: false,
       show_bounce_counter: false,
-      show_corner_counter: true,
+      show_corner_counter: false,
       pause_on_tap: true,
       random_start: true,
       change_color_on_bounce: true,
+
+      power_led: true,
+      power_led_position: "bottom_right",
+      power_led_mode: "steady",
+      power_led_color: "#ef4444",
+      power_led_size: 7,
+      power_led_glow: 12,
+      power_led_opacity: 0.95,
+      power_led_blink_speed: 1400,
+      power_led_side_inset: 42,
 
       transport_osd: true,
       transport_osd_position: "center",
@@ -159,6 +169,13 @@ class BouncyTextCard extends HTMLElement {
       { value: "center", label: "Centre" },
     ];
 
+    const ledPositions = [
+      { value: "top_left", label: "Top left" },
+      { value: "top_right", label: "Top right" },
+      { value: "bottom_left", label: "Bottom left" },
+      { value: "bottom_right", label: "Bottom right" },
+    ];
+
     return {
       schema: [
         {
@@ -216,21 +233,17 @@ class BouncyTextCard extends HTMLElement {
             { name: "background_color", selector: { text: {} } },
             { name: "background_color_mode", selector: { select: { mode: "dropdown", options: colourModes } } },
             { name: "background_opacity", selector: { number: { min: 0, max: 1, step: 0.05, mode: "slider" } } },
-
             { name: "card_radius", selector: { text: {} } },
             { name: "card_padding", selector: { number: { min: 0, max: 80, step: 1, mode: "slider" } } },
-
             { name: "card_border_width", selector: { number: { min: 0, max: 20, step: 1, mode: "slider" } } },
             { name: "card_border_color", selector: { text: {} } },
             { name: "card_border_opacity", selector: { number: { min: 0, max: 1, step: 0.05, mode: "slider" } } },
-
             { name: "card_shadow", selector: { boolean: {} } },
             { name: "card_shadow_color", selector: { text: {} } },
             { name: "card_shadow_blur", selector: { number: { min: 0, max: 80, step: 1, mode: "slider" } } },
             { name: "card_shadow_spread", selector: { number: { min: -20, max: 40, step: 1, mode: "slider" } } },
             { name: "card_shadow_offset_x", selector: { number: { min: -40, max: 40, step: 1, mode: "slider" } } },
             { name: "card_shadow_offset_y", selector: { number: { min: -40, max: 40, step: 1, mode: "slider" } } },
-
             { name: "card_shine", selector: { boolean: {} } },
             {
               name: "shine_layer",
@@ -262,9 +275,7 @@ class BouncyTextCard extends HTMLElement {
             { name: "plot_background_color_mode", selector: { select: { mode: "dropdown", options: colourModes } } },
             { name: "plot_background_opacity", selector: { number: { min: 0, max: 1, step: 0.05, mode: "slider" } } },
             { name: "plot_background_radius", selector: { number: { min: 0, max: 80, step: 1, mode: "slider" } } },
-
             { name: "bounce_padding", selector: { number: { min: 0, max: 100, step: 1, mode: "slider" } } },
-
             { name: "show_bounds", selector: { boolean: {} } },
             { name: "bounds_color", selector: { text: {} } },
             { name: "bounds_width", selector: { number: { min: 0, max: 12, step: 1, mode: "slider" } } },
@@ -283,6 +294,37 @@ class BouncyTextCard extends HTMLElement {
             { name: "logo_color", selector: { text: {} } },
             { name: "logo_opacity", selector: { number: { min: 0, max: 1, step: 0.05, mode: "slider" } } },
             { name: "change_color_on_bounce", selector: { boolean: {} } },
+          ],
+        },
+
+        {
+          type: "expandable",
+          name: "power_led",
+          title: "Power LED",
+          icon: "mdi:led-on",
+          flatten: true,
+          schema: [
+            { name: "power_led", selector: { boolean: {} } },
+            { name: "power_led_position", selector: { select: { mode: "dropdown", options: ledPositions } } },
+            {
+              name: "power_led_mode",
+              selector: {
+                select: {
+                  mode: "dropdown",
+                  options: [
+                    { value: "steady", label: "Steady" },
+                    { value: "blink", label: "Blink" },
+                    { value: "pulse", label: "Pulse" },
+                  ],
+                },
+              },
+            },
+            { name: "power_led_color", selector: { text: {} } },
+            { name: "power_led_size", selector: { number: { min: 3, max: 24, step: 1, mode: "slider" } } },
+            { name: "power_led_glow", selector: { number: { min: 0, max: 40, step: 1, mode: "slider" } } },
+            { name: "power_led_opacity", selector: { number: { min: 0, max: 1, step: 0.05, mode: "slider" } } },
+            { name: "power_led_blink_speed", selector: { number: { min: 300, max: 4000, step: 100, mode: "slider", unit_of_measurement: "ms" } } },
+            { name: "power_led_side_inset", selector: { number: { min: 0, max: 120, step: 1, mode: "slider" } } },
           ],
         },
 
@@ -387,18 +429,15 @@ class BouncyTextCard extends HTMLElement {
             { name: "corner_background_color", selector: { text: {} } },
             { name: "corner_border_color", selector: { text: {} } },
             { name: "corner_glow_color", selector: { text: {} } },
-
             { name: "corner_flash", selector: { boolean: {} } },
             { name: "corner_flash_color", selector: { text: {} } },
             { name: "corner_flash_opacity", selector: { number: { min: 0, max: 1, step: 0.05, mode: "slider" } } },
             { name: "corner_flash_duration", selector: { number: { min: 100, max: 3000, step: 50, mode: "slider", unit_of_measurement: "ms" } } },
-
             { name: "corner_confetti", selector: { boolean: {} } },
             { name: "corner_confetti_count", selector: { number: { min: 0, max: 40, step: 1, mode: "slider" } } },
             { name: "corner_confetti_colors", selector: { text: {} } },
             { name: "corner_confetti_duration", selector: { number: { min: 100, max: 3000, step: 50, mode: "slider", unit_of_measurement: "ms" } } },
             { name: "corner_confetti_spread", selector: { number: { min: 20, max: 180, step: 5, mode: "slider" } } },
-
             { name: "corner_border_chase", selector: { boolean: {} } },
             {
               name: "corner_border_chase_mode",
@@ -449,6 +488,7 @@ class BouncyTextCard extends HTMLElement {
       plot_background_color: "Bounce arena background colour", plot_background_color_mode: "Bounce arena background colour mode", plot_background_opacity: "Bounce arena background opacity", plot_background_radius: "Bounce arena corner radius", bounce_padding: "Bounce region padding",
       show_bounds: "Show bounds", bounds_color: "Bounds colour", bounds_width: "Bounds width", bounds_opacity: "Bounds opacity", bounds_style: "Bounds style",
       change_color_on_bounce: "Change colour on bounce",
+      power_led: "Show power LED", power_led_position: "Power LED position", power_led_mode: "Power LED mode", power_led_color: "Power LED colour", power_led_size: "Power LED size", power_led_glow: "Power LED glow", power_led_opacity: "Power LED opacity", power_led_blink_speed: "Blink/pulse speed", power_led_side_inset: "Power LED side inset",
       screen_osd: "Show screen OSD", screen_osd_label: "OSD label", screen_osd_detail: "OSD detail", screen_osd_position: "OSD position", screen_osd_color: "OSD text colour", screen_osd_background: "OSD background", screen_osd_opacity: "OSD opacity", screen_osd_size: "OSD text size",
       transport_osd: "Show pause/play OSD", transport_osd_position: "Pause/play position", transport_osd_duration: "Play message duration", transport_osd_pause_text: "Pause text", transport_osd_play_text: "Play text", transport_osd_show_play: "Show play message", transport_osd_color: "Pause/play text colour", transport_osd_background: "Pause/play background", transport_osd_opacity: "Pause/play opacity", transport_osd_size: "Pause/play size",
       screen_break: "Show screen break", screen_break_on_corner: "Add break on corner hit", screen_break_style: "Break style", screen_break_origin: "Break origin", screen_break_max: "Maximum breaks", screen_break_opacity: "Break opacity", screen_break_size: "Break size", screen_break_intensity: "Break intensity", screen_break_lines: "LCD failure lines", screen_break_branchiness: "Glass branchiness", screen_break_color: "Break line colour", screen_break_glow_color: "Break glow colour", screen_break_dead_color: "Dead panel colour", screen_break_bleed_color: "Panel bleed colour", screen_break_rgb_opacity: "RGB line opacity",
@@ -463,6 +503,10 @@ class BouncyTextCard extends HTMLElement {
 
   static helper(schema) {
     const helpers = {
+      power_led: "Adds a small TV-style power light in the frame/bezel area around the screen.",
+      power_led_position: "Places the LED in the frame, just outside the screen edge.",
+      power_led_side_inset: "Moves the LED inward from the side so it sits like a real TV power light rather than in the corner.",
+      power_led_mode: "Steady is always on; blink switches on/off; pulse gently breathes.",
       screen_break_style: "LCD gives dead panel blobs and coloured failure lines; glass gives the older spiderweb crack.",
       screen_break_on_corner: "When enabled, every corner hit adds another break until the maximum is reached.",
       screen_break_intensity: "Controls how strong the dead panel, bleed and failure-line effects appear.",
@@ -531,6 +575,11 @@ class BouncyTextCard extends HTMLElement {
     const s = Number(c.size) || 56;
     const cp = Number(c.card_padding) || 0;
     const bp = Math.max(0, Number(c.bounce_padding) || 0);
+    const ledSize = Number(c.power_led_size) || 7;
+
+    // LED sits in the bezel/frame rail rather than the outer card corner.
+    const ledRailOffset = Math.max(2, cp / 2 - ledSize / 2);
+    const ledSideInset = Math.max(0, Number(c.power_led_side_inset) || Math.max(cp + 10, cp * 1.7));
 
     const cardBg = this.resolveColor(c.background_color, c.background_color_mode, c.background_opacity);
     const plotBg = this.resolveColor(c.plot_background_color, c.plot_background_color_mode, c.plot_background_opacity);
@@ -577,6 +626,61 @@ class BouncyTextCard extends HTMLElement {
           box-sizing: border-box;
           padding: ${cp}px;
           overflow: hidden;
+        }
+
+        .power-led {
+          display: ${this.bool(c.power_led) ? "block" : "none"};
+          position: absolute;
+          z-index: 20;
+          width: ${ledSize}px;
+          height: ${ledSize}px;
+          border-radius: 999px;
+          pointer-events: none;
+          background:
+            radial-gradient(circle at 35% 30%, rgba(255,255,255,.95) 0 10%, ${c.power_led_color} 28%, rgba(80,0,0,.95) 100%);
+          opacity: ${Number(c.power_led_opacity)};
+          box-shadow:
+            0 0 ${Number(c.power_led_glow) || 0}px ${c.power_led_color},
+            0 0 ${Math.max(1, (Number(c.power_led_glow) || 0) * 0.45)}px ${c.power_led_color},
+            inset 0 -1px 2px rgba(0,0,0,.45);
+        }
+
+        .power-led::after {
+          content: "";
+          position: absolute;
+          inset: -${Math.max(3, ledSize * 0.65)}px;
+          border-radius: inherit;
+          background: radial-gradient(circle, ${c.power_led_color} 0%, transparent 65%);
+          opacity: .24;
+          filter: blur(2px);
+        }
+
+        .power-led.top_left {
+          top: ${ledRailOffset}px;
+          left: ${ledSideInset}px;
+        }
+
+        .power-led.top_right {
+          top: ${ledRailOffset}px;
+          right: ${ledSideInset}px;
+        }
+
+        .power-led.bottom_left {
+          bottom: ${ledRailOffset}px;
+          left: ${ledSideInset}px;
+        }
+
+        .power-led.bottom_right {
+          bottom: ${ledRailOffset}px;
+          right: ${ledSideInset}px;
+        }
+
+        .power-led.mode-blink {
+          animation: bouncy-power-led-blink ${Number(c.power_led_blink_speed) || 1400}ms steps(2, end) infinite;
+        }
+
+        .power-led.mode-pulse {
+          animation: bouncy-power-led-pulse ${Number(c.power_led_blink_speed) || 1400}ms ease-in-out infinite;
         }
 
         #arena {
@@ -851,6 +955,22 @@ class BouncyTextCard extends HTMLElement {
 
         :host([corner]) #corner { display: block; }
 
+        @keyframes bouncy-power-led-blink {
+          0%, 49% { opacity: ${Number(c.power_led_opacity)}; }
+          50%, 100% { opacity: .18; box-shadow: inset 0 -1px 2px rgba(0,0,0,.45); }
+        }
+
+        @keyframes bouncy-power-led-pulse {
+          0%, 100% {
+            opacity: ${Math.max(0.25, Number(c.power_led_opacity) * 0.45)};
+            transform: scale(.88);
+          }
+          50% {
+            opacity: ${Number(c.power_led_opacity)};
+            transform: scale(1.08);
+          }
+        }
+
         @keyframes bouncy-screen-flash {
           0% { opacity: 0; }
           18% { opacity: ${Number(c.corner_flash_opacity) || 0.2}; }
@@ -934,6 +1054,7 @@ class BouncyTextCard extends HTMLElement {
             ${this.bool(c.show_debug) ? `<div id="debug" class="overlay"></div>` : ""}
             <div id="corner" class="overlay">${this.esc(c.corner_text)}</div>
           </div>
+          <div class="power-led ${this.esc(c.power_led_position)} mode-${this.esc(c.power_led_mode)}"></div>
         </div>
       </ha-card>
     `;

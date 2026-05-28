@@ -84,9 +84,11 @@ class BouncyTextCard extends HTMLElement {
       corner_confetti_spread: 80,
 
       corner_border_chase: true,
+      corner_border_chase_mode: "adjacent_sides",
       corner_border_chase_color: "#facc15",
       corner_border_chase_width: 3,
-      corner_border_chase_duration: 900,
+      corner_border_chase_length: 60,
+      corner_border_chase_duration: 700,
 
       background: undefined,
       text_color: undefined,
@@ -268,8 +270,21 @@ class BouncyTextCard extends HTMLElement {
             { name: "corner_confetti_spread", selector: { number: { min: 20, max: 180, step: 5, mode: "slider" } } },
 
             { name: "corner_border_chase", selector: { boolean: {} } },
+            {
+              name: "corner_border_chase_mode",
+              selector: {
+                select: {
+                  mode: "dropdown",
+                  options: [
+                    { value: "adjacent_sides", label: "From hit corner along adjacent sides" },
+                    { value: "full_loop", label: "Full screen loop" },
+                  ],
+                },
+              },
+            },
             { name: "corner_border_chase_color", selector: { text: {} } },
             { name: "corner_border_chase_width", selector: { number: { min: 1, max: 12, step: 1, mode: "slider" } } },
+            { name: "corner_border_chase_length", selector: { number: { min: 10, max: 100, step: 5, mode: "slider", unit_of_measurement: "%" } } },
             { name: "corner_border_chase_duration", selector: { number: { min: 100, max: 3000, step: 50, mode: "slider", unit_of_measurement: "ms" } } },
           ],
         },
@@ -368,8 +383,10 @@ class BouncyTextCard extends HTMLElement {
       corner_confetti_spread: "Confetti spread",
 
       corner_border_chase: "Border chase",
+      corner_border_chase_mode: "Border chase mode",
       corner_border_chase_color: "Border chase colour",
       corner_border_chase_width: "Border chase width",
+      corner_border_chase_length: "Border chase length",
       corner_border_chase_duration: "Border chase duration",
 
       show_corner_counter: "Show corner counter",
@@ -407,7 +424,8 @@ class BouncyTextCard extends HTMLElement {
       corner_flash: "Briefly flashes the bounce arena/screen when a corner is hit.",
       corner_confetti: "Creates a small confetti burst from the hit corner.",
       corner_confetti_colors: "Comma-separated list of confetti colours.",
-      corner_border_chase: "Runs four clean edge segments around the screen border, avoiding the previous conic-gradient mask effect.",
+      corner_border_chase_mode: "Adjacent sides starts from the hit corner; full loop traces the whole screen border.",
+      corner_border_chase_length: "How far the adjacent-side pulse travels before fading.",
       show_debug: "Shows position, direction, speed and size data.",
     };
 
@@ -483,7 +501,8 @@ class BouncyTextCard extends HTMLElement {
     const shineZ = c.shine_layer === "below_logo" ? 3 : 5;
     const logoZ = 4;
     const chaseWidth = Number(c.corner_border_chase_width) || 3;
-    const chaseDuration = Number(c.corner_border_chase_duration) || 900;
+    const chaseDuration = Number(c.corner_border_chase_duration) || 700;
+    const chaseLength = Math.max(0.1, Math.min(1, (Number(c.corner_border_chase_length) || 60) / 100));
 
     const logo =
       c.mode === "icon"
@@ -578,7 +597,12 @@ class BouncyTextCard extends HTMLElement {
         .chase-segment {
           position: absolute;
           display: block;
-          background: ${c.corner_border_chase_color};
+          background: linear-gradient(
+            90deg,
+            ${c.corner_border_chase_color} 0%,
+            ${c.corner_border_chase_color} 55%,
+            transparent 100%
+          );
           opacity: 0;
           box-shadow: 0 0 ${chaseWidth * 4}px ${c.corner_border_chase_color};
         }
@@ -587,12 +611,14 @@ class BouncyTextCard extends HTMLElement {
         .chase-bottom {
           height: ${chaseWidth}px;
           width: 100%;
+          transform: scaleX(0);
         }
 
         .chase-left,
         .chase-right {
           width: ${chaseWidth}px;
           height: 100%;
+          transform: scaleY(0);
         }
 
         .chase-top {
@@ -605,34 +631,131 @@ class BouncyTextCard extends HTMLElement {
           top: 0;
           right: 0;
           transform-origin: center top;
+          background: linear-gradient(
+            180deg,
+            ${c.corner_border_chase_color} 0%,
+            ${c.corner_border_chase_color} 55%,
+            transparent 100%
+          );
         }
 
         .chase-bottom {
           right: 0;
           bottom: 0;
           transform-origin: right center;
+          background: linear-gradient(
+            270deg,
+            ${c.corner_border_chase_color} 0%,
+            ${c.corner_border_chase_color} 55%,
+            transparent 100%
+          );
         }
 
         .chase-left {
           left: 0;
           bottom: 0;
           transform-origin: center bottom;
+          background: linear-gradient(
+            0deg,
+            ${c.corner_border_chase_color} 0%,
+            ${c.corner_border_chase_color} 55%,
+            transparent 100%
+          );
         }
 
-        :host([chase]) .chase-top {
-          animation: bouncy-chase-top ${chaseDuration}ms linear both;
+        :host([chase-mode="full_loop"][chase]) .chase-top {
+          animation: bouncy-chase-top-full ${chaseDuration}ms linear both;
         }
 
-        :host([chase]) .chase-right {
-          animation: bouncy-chase-right ${chaseDuration}ms linear both;
+        :host([chase-mode="full_loop"][chase]) .chase-right {
+          animation: bouncy-chase-right-full ${chaseDuration}ms linear both;
         }
 
-        :host([chase]) .chase-bottom {
-          animation: bouncy-chase-bottom ${chaseDuration}ms linear both;
+        :host([chase-mode="full_loop"][chase]) .chase-bottom {
+          animation: bouncy-chase-bottom-full ${chaseDuration}ms linear both;
         }
 
-        :host([chase]) .chase-left {
-          animation: bouncy-chase-left ${chaseDuration}ms linear both;
+        :host([chase-mode="full_loop"][chase]) .chase-left {
+          animation: bouncy-chase-left-full ${chaseDuration}ms linear both;
+        }
+
+        :host([chase-mode="adjacent_sides"][hit-corner="top-left"][chase]) .chase-top,
+        :host([chase-mode="adjacent_sides"][hit-corner="top-left"][chase]) .chase-left,
+        :host([chase-mode="adjacent_sides"][hit-corner="top-right"][chase]) .chase-top,
+        :host([chase-mode="adjacent_sides"][hit-corner="top-right"][chase]) .chase-right,
+        :host([chase-mode="adjacent_sides"][hit-corner="bottom-right"][chase]) .chase-bottom,
+        :host([chase-mode="adjacent_sides"][hit-corner="bottom-right"][chase]) .chase-right,
+        :host([chase-mode="adjacent_sides"][hit-corner="bottom-left"][chase]) .chase-bottom,
+        :host([chase-mode="adjacent_sides"][hit-corner="bottom-left"][chase]) .chase-left {
+          animation: bouncy-chase-adjacent ${chaseDuration}ms ease-out both;
+        }
+
+        :host([hit-corner="top-right"]) .chase-top {
+          left: auto;
+          right: 0;
+          transform-origin: right center;
+          background: linear-gradient(
+            270deg,
+            ${c.corner_border_chase_color} 0%,
+            ${c.corner_border_chase_color} 55%,
+            transparent 100%
+          );
+        }
+
+        :host([hit-corner="top-right"]) .chase-right {
+          transform-origin: center top;
+          background: linear-gradient(
+            180deg,
+            ${c.corner_border_chase_color} 0%,
+            ${c.corner_border_chase_color} 55%,
+            transparent 100%
+          );
+        }
+
+        :host([hit-corner="bottom-right"]) .chase-bottom {
+          transform-origin: right center;
+          background: linear-gradient(
+            270deg,
+            ${c.corner_border_chase_color} 0%,
+            ${c.corner_border_chase_color} 55%,
+            transparent 100%
+          );
+        }
+
+        :host([hit-corner="bottom-right"]) .chase-right {
+          top: auto;
+          bottom: 0;
+          transform-origin: center bottom;
+          background: linear-gradient(
+            0deg,
+            ${c.corner_border_chase_color} 0%,
+            ${c.corner_border_chase_color} 55%,
+            transparent 100%
+          );
+        }
+
+        :host([hit-corner="bottom-left"]) .chase-bottom {
+          left: 0;
+          right: auto;
+          transform-origin: left center;
+          background: linear-gradient(
+            90deg,
+            ${c.corner_border_chase_color} 0%,
+            ${c.corner_border_chase_color} 55%,
+            transparent 100%
+          );
+        }
+
+        :host([hit-corner="bottom-left"]) .chase-left {
+          top: auto;
+          bottom: 0;
+          transform-origin: center bottom;
+          background: linear-gradient(
+            0deg,
+            ${c.corner_border_chase_color} 0%,
+            ${c.corner_border_chase_color} 55%,
+            transparent 100%
+          );
         }
 
         .confetti {
@@ -731,27 +854,43 @@ class BouncyTextCard extends HTMLElement {
           100% { opacity: 0; }
         }
 
-        @keyframes bouncy-chase-top {
+        @keyframes bouncy-chase-adjacent {
+          0% {
+            opacity: 0;
+          }
+          10% {
+            opacity: 1;
+          }
+          65% {
+            opacity: .85;
+          }
+          100% {
+            opacity: 0;
+            transform: scaleX(${chaseLength}) scaleY(${chaseLength});
+          }
+        }
+
+        @keyframes bouncy-chase-top-full {
           0% { opacity: 1; transform: scaleX(0); }
           22% { opacity: 1; transform: scaleX(1); }
           25%, 100% { opacity: 0; transform: scaleX(1); }
         }
 
-        @keyframes bouncy-chase-right {
+        @keyframes bouncy-chase-right-full {
           0%, 24% { opacity: 0; transform: scaleY(0); }
           25% { opacity: 1; transform: scaleY(0); }
           47% { opacity: 1; transform: scaleY(1); }
           50%, 100% { opacity: 0; transform: scaleY(1); }
         }
 
-        @keyframes bouncy-chase-bottom {
+        @keyframes bouncy-chase-bottom-full {
           0%, 49% { opacity: 0; transform: scaleX(0); }
           50% { opacity: 1; transform: scaleX(0); }
           72% { opacity: 1; transform: scaleX(1); }
           75%, 100% { opacity: 0; transform: scaleX(1); }
         }
 
-        @keyframes bouncy-chase-left {
+        @keyframes bouncy-chase-left-full {
           0%, 74% { opacity: 0; transform: scaleY(0); }
           75% { opacity: 1; transform: scaleY(0); }
           97% { opacity: 1; transform: scaleY(1); }
@@ -814,6 +953,8 @@ class BouncyTextCard extends HTMLElement {
     this.cEl = this.shadowRoot.querySelector("#corners");
     this.pEl = this.shadowRoot.querySelector("#pause");
     this.confetti = this.shadowRoot.querySelector("#confetti");
+
+    this.setAttribute("chase-mode", c.corner_border_chase_mode || "adjacent_sides");
 
     if (this.card && this.bool(c.pause_on_tap)) this.card.onclick = () => this.togglePause();
     this.updateEntity();
@@ -910,6 +1051,9 @@ class BouncyTextCard extends HTMLElement {
   celebrateCorner(maxX, maxY) {
     const corner = this.getCornerInfo(maxX, maxY);
 
+    this.setAttribute("hit-corner", corner.name);
+    this.setAttribute("chase-mode", this.c.corner_border_chase_mode || "adjacent_sides");
+
     if (this.bool(this.c.corner_flash)) {
       this.removeAttribute("flash");
       requestAnimationFrame(() => this.setAttribute("flash", ""));
@@ -926,7 +1070,7 @@ class BouncyTextCard extends HTMLElement {
       clearTimeout(this.chaseTimer);
       this.chaseTimer = setTimeout(
         () => this.removeAttribute("chase"),
-        Number(this.c.corner_border_chase_duration) || 900
+        Number(this.c.corner_border_chase_duration) || 700
       );
     }
 
@@ -945,6 +1089,7 @@ class BouncyTextCard extends HTMLElement {
     const top = this.y <= maxY / 2;
 
     return {
+      name: `${top ? "top" : "bottom"}-${left ? "left" : "right"}`,
       x: left ? 0 : this.arena.clientWidth,
       y: top ? 0 : this.arena.clientHeight,
       dx: left ? 1 : -1,

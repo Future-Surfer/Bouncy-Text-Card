@@ -407,7 +407,7 @@ class BouncyTextCard extends HTMLElement {
       corner_flash: "Briefly flashes the bounce arena/screen when a corner is hit.",
       corner_confetti: "Creates a small confetti burst from the hit corner.",
       corner_confetti_colors: "Comma-separated list of confetti colours.",
-      corner_border_chase: "Runs a quick animated highlight around the screen border.",
+      corner_border_chase: "Runs four clean edge segments around the screen border, avoiding the previous conic-gradient mask effect.",
       show_debug: "Shows position, direction, speed and size data.",
     };
 
@@ -482,6 +482,8 @@ class BouncyTextCard extends HTMLElement {
     const counters = this.bool(c.show_bounce_counter) || this.bool(c.show_corner_counter);
     const shineZ = c.shine_layer === "below_logo" ? 3 : 5;
     const logoZ = 4;
+    const chaseWidth = Number(c.corner_border_chase_width) || 3;
+    const chaseDuration = Number(c.corner_border_chase_duration) || 900;
 
     const logo =
       c.mode === "icon"
@@ -570,28 +572,67 @@ class BouncyTextCard extends HTMLElement {
           z-index: 6;
           pointer-events: none;
           border-radius: inherit;
-          opacity: 0;
-          padding: ${Number(c.corner_border_chase_width) || 3}px;
-          background: conic-gradient(
-            from 0deg,
-            transparent 0deg,
-            transparent 250deg,
-            ${c.corner_border_chase_color} 292deg,
-            transparent 330deg,
-            transparent 360deg
-          );
-          -webkit-mask:
-            linear-gradient(#000 0 0) content-box,
-            linear-gradient(#000 0 0);
-          -webkit-mask-composite: xor;
-          mask:
-            linear-gradient(#000 0 0) content-box,
-            linear-gradient(#000 0 0);
-          mask-composite: exclude;
+          overflow: hidden;
         }
 
-        :host([chase]) .border-chase {
-          animation: bouncy-border-chase ${Number(c.corner_border_chase_duration) || 900}ms linear both;
+        .chase-segment {
+          position: absolute;
+          display: block;
+          background: ${c.corner_border_chase_color};
+          opacity: 0;
+          box-shadow: 0 0 ${chaseWidth * 4}px ${c.corner_border_chase_color};
+        }
+
+        .chase-top,
+        .chase-bottom {
+          height: ${chaseWidth}px;
+          width: 100%;
+        }
+
+        .chase-left,
+        .chase-right {
+          width: ${chaseWidth}px;
+          height: 100%;
+        }
+
+        .chase-top {
+          top: 0;
+          left: 0;
+          transform-origin: left center;
+        }
+
+        .chase-right {
+          top: 0;
+          right: 0;
+          transform-origin: center top;
+        }
+
+        .chase-bottom {
+          right: 0;
+          bottom: 0;
+          transform-origin: right center;
+        }
+
+        .chase-left {
+          left: 0;
+          bottom: 0;
+          transform-origin: center bottom;
+        }
+
+        :host([chase]) .chase-top {
+          animation: bouncy-chase-top ${chaseDuration}ms linear both;
+        }
+
+        :host([chase]) .chase-right {
+          animation: bouncy-chase-right ${chaseDuration}ms linear both;
+        }
+
+        :host([chase]) .chase-bottom {
+          animation: bouncy-chase-bottom ${chaseDuration}ms linear both;
+        }
+
+        :host([chase]) .chase-left {
+          animation: bouncy-chase-left ${chaseDuration}ms linear both;
         }
 
         .confetti {
@@ -690,21 +731,31 @@ class BouncyTextCard extends HTMLElement {
           100% { opacity: 0; }
         }
 
-        @keyframes bouncy-border-chase {
-          0% {
-            opacity: 0;
-            transform: rotate(0deg);
-          }
-          12% {
-            opacity: 1;
-          }
-          88% {
-            opacity: 1;
-          }
-          100% {
-            opacity: 0;
-            transform: rotate(360deg);
-          }
+        @keyframes bouncy-chase-top {
+          0% { opacity: 1; transform: scaleX(0); }
+          22% { opacity: 1; transform: scaleX(1); }
+          25%, 100% { opacity: 0; transform: scaleX(1); }
+        }
+
+        @keyframes bouncy-chase-right {
+          0%, 24% { opacity: 0; transform: scaleY(0); }
+          25% { opacity: 1; transform: scaleY(0); }
+          47% { opacity: 1; transform: scaleY(1); }
+          50%, 100% { opacity: 0; transform: scaleY(1); }
+        }
+
+        @keyframes bouncy-chase-bottom {
+          0%, 49% { opacity: 0; transform: scaleX(0); }
+          50% { opacity: 1; transform: scaleX(0); }
+          72% { opacity: 1; transform: scaleX(1); }
+          75%, 100% { opacity: 0; transform: scaleX(1); }
+        }
+
+        @keyframes bouncy-chase-left {
+          0%, 74% { opacity: 0; transform: scaleY(0); }
+          75% { opacity: 1; transform: scaleY(0); }
+          97% { opacity: 1; transform: scaleY(1); }
+          100% { opacity: 0; transform: scaleY(1); }
         }
 
         @keyframes bouncy-confetti {
@@ -735,7 +786,12 @@ class BouncyTextCard extends HTMLElement {
             ${logo}
             <div class="shine"></div>
             <div class="screen-flash"></div>
-            <div class="border-chase"></div>
+            <div class="border-chase">
+              <span class="chase-segment chase-top"></span>
+              <span class="chase-segment chase-right"></span>
+              <span class="chase-segment chase-bottom"></span>
+              <span class="chase-segment chase-left"></span>
+            </div>
             <div id="confetti" class="confetti"></div>
             ${this.bool(c.pause_on_tap) ? `<div id="pause" class="overlay" hidden>Paused</div>` : ""}
             ${counters ? `

@@ -66,10 +66,27 @@ class BouncyTextCard extends HTMLElement {
       corner_threshold: null,
       corner_text: "NICE!",
       corner_duration: 650,
+      corner_text_duration: 650,
       corner_text_color: "#ffffff",
       corner_background_color: "rgba(250, 204, 21, 0.25)",
       corner_border_color: "#facc15",
       corner_glow_color: "rgba(250, 204, 21, 0.55)",
+
+      corner_flash: true,
+      corner_flash_color: "#facc15",
+      corner_flash_opacity: 0.2,
+      corner_flash_duration: 500,
+
+      corner_confetti: true,
+      corner_confetti_count: 14,
+      corner_confetti_colors: "#facc15,#38bdf8,#fb7185,#22c55e,#a78bfa",
+      corner_confetti_duration: 850,
+      corner_confetti_spread: 80,
+
+      corner_border_chase: true,
+      corner_border_chase_color: "#facc15",
+      corner_border_chase_width: 3,
+      corner_border_chase_duration: 900,
 
       background: undefined,
       text_color: undefined,
@@ -232,12 +249,28 @@ class BouncyTextCard extends HTMLElement {
           schema: [
             { name: "corner_celebration", selector: { boolean: {} } },
             { name: "corner_text", selector: { text: {} } },
-            { name: "corner_duration", selector: { number: { min: 100, max: 3000, step: 50, mode: "box", unit_of_measurement: "ms" } } },
+            { name: "corner_text_duration", selector: { number: { min: 100, max: 3000, step: 50, mode: "slider", unit_of_measurement: "ms" } } },
             { name: "corner_threshold", selector: { number: { min: 0, max: 60, step: 1, mode: "box" } } },
             { name: "corner_text_color", selector: { text: {} } },
             { name: "corner_background_color", selector: { text: {} } },
             { name: "corner_border_color", selector: { text: {} } },
             { name: "corner_glow_color", selector: { text: {} } },
+
+            { name: "corner_flash", selector: { boolean: {} } },
+            { name: "corner_flash_color", selector: { text: {} } },
+            { name: "corner_flash_opacity", selector: { number: { min: 0, max: 1, step: 0.05, mode: "slider" } } },
+            { name: "corner_flash_duration", selector: { number: { min: 100, max: 3000, step: 50, mode: "slider", unit_of_measurement: "ms" } } },
+
+            { name: "corner_confetti", selector: { boolean: {} } },
+            { name: "corner_confetti_count", selector: { number: { min: 0, max: 40, step: 1, mode: "slider" } } },
+            { name: "corner_confetti_colors", selector: { text: {} } },
+            { name: "corner_confetti_duration", selector: { number: { min: 100, max: 3000, step: 50, mode: "slider", unit_of_measurement: "ms" } } },
+            { name: "corner_confetti_spread", selector: { number: { min: 20, max: 180, step: 5, mode: "slider" } } },
+
+            { name: "corner_border_chase", selector: { boolean: {} } },
+            { name: "corner_border_chase_color", selector: { text: {} } },
+            { name: "corner_border_chase_width", selector: { number: { min: 1, max: 12, step: 1, mode: "slider" } } },
+            { name: "corner_border_chase_duration", selector: { number: { min: 100, max: 3000, step: 50, mode: "slider", unit_of_measurement: "ms" } } },
           ],
         },
 
@@ -316,12 +349,28 @@ class BouncyTextCard extends HTMLElement {
 
       corner_celebration: "Corner celebration",
       corner_text: "Corner text",
-      corner_duration: "Corner celebration duration",
+      corner_text_duration: "Celebration text duration",
       corner_threshold: "Corner threshold",
       corner_text_color: "Corner text colour",
-      corner_background_color: "Corner background colour",
+      corner_background_color: "Corner text background",
       corner_border_color: "Corner border colour",
       corner_glow_color: "Corner glow colour",
+
+      corner_flash: "Screen flash",
+      corner_flash_color: "Screen flash colour",
+      corner_flash_opacity: "Screen flash opacity",
+      corner_flash_duration: "Screen flash duration",
+
+      corner_confetti: "Mini confetti",
+      corner_confetti_count: "Confetti pieces",
+      corner_confetti_colors: "Confetti colours",
+      corner_confetti_duration: "Confetti duration",
+      corner_confetti_spread: "Confetti spread",
+
+      corner_border_chase: "Border chase",
+      corner_border_chase_color: "Border chase colour",
+      corner_border_chase_width: "Border chase width",
+      corner_border_chase_duration: "Border chase duration",
 
       show_corner_counter: "Show corner counter",
       show_bounce_counter: "Show bounce counter",
@@ -352,7 +401,13 @@ class BouncyTextCard extends HTMLElement {
       plot_background_color: "Background colour for the inner bounce arena.",
       bounce_padding: "Inset the invisible bounce region so the logo stays away from the screen edges.",
       show_bounds: "Draws the actual collision area.",
+
       corner_threshold: "How close to both edges counts as a corner hit. Leave blank for automatic.",
+      corner_text_duration: "How long the central celebration text remains visible.",
+      corner_flash: "Briefly flashes the bounce arena/screen when a corner is hit.",
+      corner_confetti: "Creates a small confetti burst from the hit corner.",
+      corner_confetti_colors: "Comma-separated list of confetti colours.",
+      corner_border_chase: "Runs a quick animated highlight around the screen border.",
       show_debug: "Shows position, direction, speed and size data.",
     };
 
@@ -392,6 +447,7 @@ class BouncyTextCard extends HTMLElement {
     }
     if (config.border_radius !== undefined && config.card_radius === undefined) this.c.card_radius = `${config.border_radius}px`;
     if (config.padding !== undefined && config.card_padding === undefined) this.c.card_padding = config.padding;
+    if (config.corner_duration !== undefined && config.corner_text_duration === undefined) this.c.corner_text_duration = config.corner_duration;
   }
 
   set hass(hass) {
@@ -405,7 +461,9 @@ class BouncyTextCard extends HTMLElement {
 
   disconnectedCallback() {
     if (this.raf) cancelAnimationFrame(this.raf);
-    clearTimeout(this.cornerTimer);
+    clearTimeout(this.cornerTextTimer);
+    clearTimeout(this.flashTimer);
+    clearTimeout(this.chaseTimer);
     this.raf = null;
   }
 
@@ -490,6 +548,71 @@ class BouncyTextCard extends HTMLElement {
           transform: translateX(${Number(c.card_shine_position) || 0}%);
         }
 
+        .screen-flash {
+          display: ${this.bool(c.corner_flash) ? "block" : "none"};
+          position: absolute;
+          inset: 0;
+          z-index: 5;
+          pointer-events: none;
+          border-radius: inherit;
+          background: ${c.corner_flash_color};
+          opacity: 0;
+        }
+
+        :host([flash]) .screen-flash {
+          animation: bouncy-screen-flash ${Number(c.corner_flash_duration) || 500}ms ease-out both;
+        }
+
+        .border-chase {
+          display: ${this.bool(c.corner_border_chase) ? "block" : "none"};
+          position: absolute;
+          inset: 0;
+          z-index: 6;
+          pointer-events: none;
+          border-radius: inherit;
+          opacity: 0;
+          padding: ${Number(c.corner_border_chase_width) || 3}px;
+          background: conic-gradient(
+            from 0deg,
+            transparent 0deg,
+            transparent 250deg,
+            ${c.corner_border_chase_color} 292deg,
+            transparent 330deg,
+            transparent 360deg
+          );
+          -webkit-mask:
+            linear-gradient(#000 0 0) content-box,
+            linear-gradient(#000 0 0);
+          -webkit-mask-composite: xor;
+          mask:
+            linear-gradient(#000 0 0) content-box,
+            linear-gradient(#000 0 0);
+          mask-composite: exclude;
+        }
+
+        :host([chase]) .border-chase {
+          animation: bouncy-border-chase ${Number(c.corner_border_chase_duration) || 900}ms linear both;
+        }
+
+        .confetti {
+          display: ${this.bool(c.corner_confetti) ? "block" : "none"};
+          position: absolute;
+          inset: 0;
+          z-index: 7;
+          pointer-events: none;
+          overflow: hidden;
+        }
+
+        .confetti-piece {
+          position: absolute;
+          width: var(--w);
+          height: var(--h);
+          background: var(--confetti-color);
+          border-radius: 2px;
+          opacity: 0;
+          animation: bouncy-confetti var(--confetti-duration) cubic-bezier(.16,.84,.3,1) forwards;
+        }
+
         .logo {
           position: absolute;
           z-index: ${logoZ};
@@ -517,7 +640,7 @@ class BouncyTextCard extends HTMLElement {
 
         .overlay {
           position: absolute;
-          z-index: 6;
+          z-index: 8;
           pointer-events: none;
           font-size: 11px;
           line-height: 1.3;
@@ -560,6 +683,49 @@ class BouncyTextCard extends HTMLElement {
         }
 
         :host([corner]) #corner { display: block; }
+
+        @keyframes bouncy-screen-flash {
+          0% { opacity: 0; }
+          18% { opacity: ${Number(c.corner_flash_opacity) || 0.2}; }
+          100% { opacity: 0; }
+        }
+
+        @keyframes bouncy-border-chase {
+          0% {
+            opacity: 0;
+            transform: rotate(0deg);
+          }
+          12% {
+            opacity: 1;
+          }
+          88% {
+            opacity: 1;
+          }
+          100% {
+            opacity: 0;
+            transform: rotate(360deg);
+          }
+        }
+
+        @keyframes bouncy-confetti {
+          0% {
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(.4) rotate(0deg);
+          }
+          12% {
+            opacity: 1;
+          }
+          100% {
+            opacity: 0;
+            transform:
+              translate(
+                calc(-50% + var(--dx)),
+                calc(-50% + var(--dy))
+              )
+              scale(.9)
+              rotate(var(--rot));
+          }
+        }
       </style>
 
       <ha-card>
@@ -568,6 +734,9 @@ class BouncyTextCard extends HTMLElement {
             <div class="bounds"></div>
             ${logo}
             <div class="shine"></div>
+            <div class="screen-flash"></div>
+            <div class="border-chase"></div>
+            <div id="confetti" class="confetti"></div>
             ${this.bool(c.pause_on_tap) ? `<div id="pause" class="overlay" hidden>Paused</div>` : ""}
             ${counters ? `
               <div id="counts" class="overlay">
@@ -588,6 +757,7 @@ class BouncyTextCard extends HTMLElement {
     this.bEl = this.shadowRoot.querySelector("#bounces");
     this.cEl = this.shadowRoot.querySelector("#corners");
     this.pEl = this.shadowRoot.querySelector("#pause");
+    this.confetti = this.shadowRoot.querySelector("#confetti");
 
     if (this.card && this.bool(c.pause_on_tap)) this.card.onclick = () => this.togglePause();
     this.updateEntity();
@@ -675,15 +845,97 @@ class BouncyTextCard extends HTMLElement {
       this.cornerLatch = true;
       this.corners++;
       if (this.cEl) this.cEl.textContent = this.corners;
-      this.setAttribute("corner", "");
-      clearTimeout(this.cornerTimer);
-      this.cornerTimer = setTimeout(
-        () => this.removeAttribute("corner"),
-        Number(this.c.corner_duration) || 650
-      );
+      this.celebrateCorner(maxX, maxY);
     }
 
     this.jitter();
+  }
+
+  celebrateCorner(maxX, maxY) {
+    const corner = this.getCornerInfo(maxX, maxY);
+
+    if (this.bool(this.c.corner_flash)) {
+      this.removeAttribute("flash");
+      requestAnimationFrame(() => this.setAttribute("flash", ""));
+      clearTimeout(this.flashTimer);
+      this.flashTimer = setTimeout(
+        () => this.removeAttribute("flash"),
+        Number(this.c.corner_flash_duration) || 500
+      );
+    }
+
+    if (this.bool(this.c.corner_border_chase)) {
+      this.removeAttribute("chase");
+      requestAnimationFrame(() => this.setAttribute("chase", ""));
+      clearTimeout(this.chaseTimer);
+      this.chaseTimer = setTimeout(
+        () => this.removeAttribute("chase"),
+        Number(this.c.corner_border_chase_duration) || 900
+      );
+    }
+
+    this.setAttribute("corner", "");
+    clearTimeout(this.cornerTextTimer);
+    this.cornerTextTimer = setTimeout(
+      () => this.removeAttribute("corner"),
+      Number(this.c.corner_text_duration) || Number(this.c.corner_duration) || 650
+    );
+
+    if (this.bool(this.c.corner_confetti)) this.makeConfetti(corner);
+  }
+
+  getCornerInfo(maxX, maxY) {
+    const left = this.x <= maxX / 2;
+    const top = this.y <= maxY / 2;
+
+    return {
+      x: left ? 0 : this.arena.clientWidth,
+      y: top ? 0 : this.arena.clientHeight,
+      dx: left ? 1 : -1,
+      dy: top ? 1 : -1,
+    };
+  }
+
+  makeConfetti(corner) {
+    if (!this.confetti) return;
+
+    const count = Math.max(0, Number(this.c.corner_confetti_count) || 0);
+    const spread = Number(this.c.corner_confetti_spread) || 80;
+    const duration = Number(this.c.corner_confetti_duration) || 850;
+    const colors = String(this.c.corner_confetti_colors || "#facc15")
+      .split(",")
+      .map(x => x.trim())
+      .filter(Boolean);
+
+    this.confetti.innerHTML = "";
+
+    for (let i = 0; i < count; i++) {
+      const p = document.createElement("span");
+      const angle = Math.random() * Math.PI / 2;
+      const distance = spread * (0.35 + Math.random() * 0.75);
+      const dx = Math.cos(angle) * distance * corner.dx;
+      const dy = Math.sin(angle) * distance * corner.dy;
+      const rot = (Math.random() * 360 - 180).toFixed(0);
+      const w = 3 + Math.random() * 4;
+      const h = 5 + Math.random() * 8;
+
+      p.className = "confetti-piece";
+      p.style.left = `${corner.x}px`;
+      p.style.top = `${corner.y}px`;
+      p.style.setProperty("--dx", `${dx}px`);
+      p.style.setProperty("--dy", `${dy}px`);
+      p.style.setProperty("--rot", `${rot}deg`);
+      p.style.setProperty("--w", `${w}px`);
+      p.style.setProperty("--h", `${h}px`);
+      p.style.setProperty("--confetti-duration", `${duration}ms`);
+      p.style.setProperty("--confetti-color", colors[i % colors.length]);
+
+      this.confetti.appendChild(p);
+    }
+
+    setTimeout(() => {
+      if (this.confetti) this.confetti.innerHTML = "";
+    }, duration + 80);
   }
 
   jitter() {
